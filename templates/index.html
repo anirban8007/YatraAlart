@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>YatraAlart</title>
+    <!-- Emoji favicon — no file needed -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚂</text></svg>">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     SOS ACTIVE BANNER  (shown during live SOS tracking)
+     ══════════════════════════════════════════════════════════ -->
+<div id="sos-active-banner" class="sos-active-banner hidden">
+    <div class="sos-active-inner">
+        <span class="sos-active-dot"></span>
+        <span class="sos-active-text">
+            🚨 SOS Active — Update <strong id="sos-update-count">1</strong> sent
+        </span>
+        <button id="stop-sos-btn" class="sos-stop-btn">Stop SOS</button>
+    </div>
+</div>
+
+<!-- ── DESKTOP LAYOUT ─────────────────────────────────────── -->
+<div class="desktop-layout">
+
+    <div class="left-panel">
+
+        <!-- App Header -->
+        <div class="app-header">
+            <span class="app-logo">🚂</span>
+            <span class="app-name">YatraAlart</span>
+            <div class="header-controls">
+                <button id="theme-toggle" class="icon-btn" title="Toggle Dark Mode">🌙</button>
+                <button id="voice-toggle" class="icon-btn" title="Toggle Voice Alerts">🔊</button>
+            </div>
+            <span id="gps-dot" class="gps-dot gps-dot--searching"></span>
+        </div>
+
+        <!-- Search Box -->
+        <div class="search-wrapper">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="destination-input"
+                    placeholder="Search destination..." autocomplete="off"/>
+                <button id="clear-search-btn" class="clear-search hidden">✕</button>
+            </div>
+            <div id="suggestions-dropdown" class="suggestions-dropdown hidden"></div>
+        </div>
+
+        <!-- Status -->
+        <div id="status" class="status-bar">📡 Getting your location...</div>
+        <div id="offline-badge" class="offline-badge hidden">📶 Offline Mode</div>
+        <div id="loading-bar" class="loading-bar hidden"></div>
+
+        <!-- Detection Result -->
+        <div id="detection-panel" class="panel hidden">
+            <div id="result-badge"></div>
+            <div id="result-details"></div>
+            <div id="closest-box"></div>
+        </div>
+
+        <!-- Route Info -->
+        <div id="route-panel" class="panel hidden">
+            <div class="route-main">
+                <span id="time-value" class="route-time">--</span>
+                <span id="distance-value" class="route-distance"></span>
+            </div>
+            <div class="route-sub">Fastest route, based on current traffic</div>
+            <div id="dest-name" class="dest-name"></div>
+        </div>
+
+        <!-- Alarm Panel -->
+        <div id="alarm-panel" class="panel hidden">
+            <div class="alarm-header">🔔 Destination Alarm</div>
+            <div id="alarm-when-label" class="alarm-when-label">⏰ When</div>
+            <div id="alarm-display" class="alarm-display">10 minutes before</div>
+            <input type="range" id="alarm-slider" min="5" max="120" step="5" value="10" class="alarm-slider"/>
+            <div class="alarm-where-label">📍 Where</div>
+            <div id="alarm-dest-name" class="alarm-dest-name"></div>
+            <button id="set-alarm-btn" class="set-alarm-btn">Set Destination Alarm</button>
+            <div id="alarm-info" class="alarm-info hidden"></div>
+        </div>
+
+        <button id="clear-btn" class="clear-btn hidden">🗑️ Clear Destination</button>
+
+        <!-- SOS Section Desktop -->
+        <div class="sos-wrapper">
+            <button id="sos-btn" class="sos-btn">🆘 SOS — Send Location</button>
+            <div id="sos-contact-label" class="sos-contact-label">No contacts set</div>
+            <div class="sos-action-row">
+                <button id="sos-change-btn" class="sos-change-btn">✏️ Edit Contacts</button>
+                <button id="sos-edit-msg-btn" class="sos-change-btn hidden">💬 Edit Message</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map -->
+    <div class="map-container">
+        <button id="recenter-btn" class="map-control-btn" title="Recenter Map">🎯</button>
+        <div id="map-placeholder" class="map-placeholder">
+            <div class="map-placeholder-inner">
+                <div class="map-placeholder-pulse"></div>
+                <div class="map-placeholder-text">📡 Getting your location...</div>
+            </div>
+        </div>
+        <div id="map" class="map-div hidden"></div>
+    </div>
+</div>
+
+<!-- ── MOBILE LAYOUT ──────────────────────────────────────── -->
+<div class="mobile-layout">
+
+    <div class="mobile-search-bar">
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="mobile-destination-input"
+                placeholder="Search destination..." autocomplete="off"/>
+            <button id="mobile-clear-search-btn" class="clear-search hidden">✕</button>
+        </div>
+        <div id="mobile-suggestions-dropdown" class="suggestions-dropdown hidden"></div>
+    </div>
+
+    <!-- Full screen map -->
+    <div class="mobile-map-container">
+        <button id="mobile-recenter-btn" class="map-control-btn mobile-map-control" title="Recenter Map">🎯</button>
+        <div id="mobile-map-placeholder" class="map-placeholder">
+            <div class="map-placeholder-inner">
+                <div class="map-placeholder-pulse"></div>
+                <div class="map-placeholder-text">📡 Getting location...</div>
+            </div>
+        </div>
+        <div id="mobile-map" class="map-div hidden"></div>
+    </div>
+
+    <!-- Bottom Sheet -->
+    <div id="bottom-sheet" class="bottom-sheet">
+        <div class="bottom-sheet-handle" id="sheet-handle"></div>
+
+        <!-- App header row -->
+        <div class="mobile-header-row">
+            <span class="app-logo-sm">🚂</span>
+            <span id="mobile-status" class="mobile-status">📡 Getting location...</span>
+            <div class="header-controls">
+                <button id="mobile-theme-toggle" class="icon-btn">🌙</button>
+                <button id="mobile-voice-toggle" class="icon-btn">🔊</button>
+            </div>
+            <span id="mobile-gps-dot" class="gps-dot gps-dot--searching"></span>
+        </div>
+
+        <div id="mobile-offline-badge" class="offline-badge hidden">📶 Offline Mode</div>
+        <div id="mobile-loading-bar" class="loading-bar hidden"></div>
+
+        <!-- Detection Result -->
+        <div id="mobile-detection-panel" class="hidden">
+            <div id="mobile-result-badge"></div>
+            <div id="mobile-result-details"></div>
+            <div id="mobile-closest-box"></div>
+        </div>
+
+        <!-- Route Info -->
+        <div id="mobile-route-panel" class="hidden">
+            <div class="route-main">
+                <span id="mobile-time-value" class="route-time">--</span>
+                <span id="mobile-distance-value" class="route-distance"></span>
+            </div>
+            <div class="route-sub">Fastest route, based on current traffic</div>
+            <div id="mobile-dest-name" class="dest-name"></div>
+        </div>
+
+        <!-- Alarm Panel -->
+        <div id="mobile-alarm-panel" class="hidden">
+            <div class="alarm-header">🔔 Destination Alarm</div>
+            <div id="mobile-alarm-when-label" class="alarm-when-label">⏰ When</div>
+            <div id="mobile-alarm-display" class="alarm-display">10 minutes before</div>
+            <input type="range" id="mobile-alarm-slider" min="5" max="120" step="5" value="10" class="alarm-slider"/>
+            <div class="alarm-where-label">📍 Where</div>
+            <div id="mobile-alarm-dest-name" class="alarm-dest-name"></div>
+            <button id="mobile-set-alarm-btn" class="set-alarm-btn">Set Destination Alarm</button>
+            <div id="mobile-alarm-info" class="alarm-info hidden"></div>
+        </div>
+
+        <button id="mobile-clear-btn" class="clear-btn hidden">🗑️ Clear Destination</button>
+
+        <!-- SOS Section Mobile -->
+        <div class="sos-wrapper">
+            <button id="mobile-sos-btn" class="sos-btn">🆘 SOS — Send Location</button>
+            <div id="mobile-sos-contact-label" class="sos-contact-label">No contacts set</div>
+            <div class="sos-action-row">
+                <button id="mobile-sos-change-btn" class="sos-change-btn">✏️ Edit Contacts</button>
+                <button id="mobile-sos-edit-msg-btn" class="sos-change-btn hidden">💬 Edit Message</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     ALARM OVERLAY
+     ══════════════════════════════════════════════════════════ -->
+<div id="alarm-overlay" class="alarm-overlay hidden">
+    <div class="alarm-box">
+        <div class="alarm-icon">🚨</div>
+        <h2>ALARM</h2>
+        <p>Approaching your destination!</p>
+        <button id="dismiss-alarm-btn" class="dismiss-btn">Dismiss</button>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SOS MODAL  — 5 steps
+     ══════════════════════════════════════════════════════════ -->
+<div id="sos-modal" class="sos-modal hidden">
+    <div class="sos-modal-box">
+
+        <!-- ── STEP: count ─────────────────────────────────── -->
+        <div id="sos-step-count">
+            <div class="sos-modal-title">🆘 SOS Setup</div>
+            <div class="sos-modal-desc">
+                Choose how many emergency contacts you want to link.<br>
+                Each contact needs to have Telegram installed.
+            </div>
+
+            <div class="sos-count-row">
+                <label class="sos-count-label">Number of contacts:</label>
+                <select id="sos-count-select" class="sos-count-select">
+                    <option value="1">1</option>
+                    <option value="2" selected>2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                </select>
+            </div>
+
+            <div class="sos-modal-desc" style="margin-top:12px; font-size:0.82rem; color:#888;">
+                Each contact must open <strong>@YatraAlertbot</strong> on Telegram and press <strong>Start</strong> to get their 5-digit code.
+            </div>
+
+            <div class="sos-modal-btns" style="margin-top:20px;">
+                <button id="sos-cancel-count" class="sos-modal-cancel">Cancel</button>
+                <button id="sos-begin-btn" class="sos-modal-save">Begin Setup →</button>
+            </div>
+        </div>
+
+        <!-- ── STEP: contact ───────────────────────────────── -->
+        <div id="sos-step-contact" class="hidden">
+            <div class="sos-modal-title">👤 Link Contact</div>
+            <div id="sos-contact-header" class="sos-contact-header">Contact 1 of 2</div>
+
+            <div class="sos-modal-desc">
+                Ask this contact to open <strong>@YatraAlertbot</strong> on Telegram → press <strong>Start</strong> → share the 5-digit code with you.
+            </div>
+
+            <!-- Name input -->
+            <div class="sos-field-label">Contact name (e.g. Mom, Rahul)</div>
+            <input type="text" id="sos-name-input" class="sos-phone-input"
+                placeholder="Enter name..." maxlength="30" autocomplete="off"/>
+
+            <!-- Code input -->
+            <div class="sos-field-label" style="margin-top:12px;">5-digit code from Telegram</div>
+            <input type="text" id="sos-code-input" class="sos-phone-input"
+                placeholder="e.g. 48291" maxlength="5" inputmode="numeric"/>
+
+            <div id="sos-code-error" class="sos-modal-hint hidden" style="color:#e74c3c; margin-top:6px;"></div>
+
+            <div class="sos-modal-btns" style="margin-top:20px;">
+                <button id="sos-cancel-contact" class="sos-modal-cancel">Cancel</button>
+                <button id="sos-verify-btn" class="sos-modal-save">Verify & Next →</button>
+            </div>
+        </div>
+
+        <!-- ── STEP: message ───────────────────────────────── -->
+        <div id="sos-step-message" class="hidden">
+            <div class="sos-modal-title">✅ All Contacts Linked!</div>
+
+            <!-- Contact summary chips -->
+            <div id="sos-contacts-summary" class="sos-contacts-summary"></div>
+
+            <!-- Shake Guide — shown only once, first time setup completes -->
+            <div id="sos-shake-guide" class="shake-guide hidden">
+                <div class="shake-guide-title">📳 Emergency Shake Gesture</div>
+                <div class="shake-guide-stage">
+                    <!-- Arrow left -->
+                    <span class="shake-arrow shake-arrow-left">←</span>
+                    <!-- Animated phone -->
+                    <span class="shake-phone">📱</span>
+                    <!-- Arrow right -->
+                    <span class="shake-arrow shake-arrow-right">→</span>
+                </div>
+                <div class="shake-guide-label">Shake LEFT &nbsp;·&nbsp; RIGHT &nbsp;·&nbsp; LEFT &nbsp;·&nbsp; RIGHT</div>
+                <div class="shake-guide-desc">Auto-sends SOS to all your contacts — no need to unlock phone</div>
+            </div>
+
+            <!-- Custom message -->
+            <div class="sos-field-label" style="margin-top:16px;">💬 Your SOS Message</div>
+            <textarea id="sos-message-input" class="sos-message-textarea"
+                placeholder="I need help! Please call me immediately."
+                maxlength="100" rows="3"></textarea>
+            <div class="sos-char-hint">Max 100 characters · Works in any language</div>
+
+            <div class="sos-modal-btns" style="margin-top:20px;">
+                <button id="sos-save-btn" class="sos-modal-save" style="flex:1;">Save &amp; Done ✓</button>
+            </div>
+        </div>
+
+        <!-- ── STEP: edit-message ──────────────────────────── -->
+        <div id="sos-step-edit-message" class="hidden">
+            <div class="sos-modal-title">💬 Edit SOS Message</div>
+            <div class="sos-modal-desc">
+                This message is sent to all your contacts when SOS is triggered.
+            </div>
+            <textarea id="sos-edit-message-input" class="sos-message-textarea"
+                placeholder="I need help! Please call me immediately."
+                maxlength="100" rows="3"></textarea>
+            <div class="sos-char-hint">Max 100 characters · Works in any language</div>
+            <div class="sos-modal-btns" style="margin-top:20px;">
+                <button id="sos-edit-msg-cancel" class="sos-modal-cancel">Cancel</button>
+                <button id="sos-edit-msg-save"   class="sos-modal-save">Save ✓</button>
+            </div>
+        </div>
+
+        <!-- ── STEP: confirm-reset ─────────────────────────── -->
+        <div id="sos-step-confirm-reset" class="hidden">
+            <div class="sos-modal-title" style="color:#e74c3c;">⚠️ Reset Contacts?</div>
+            <div class="sos-modal-desc">
+                This will <strong>remove all linked contacts</strong>. You will need to redo the full setup.<br><br>
+                Your custom SOS message will be kept.
+            </div>
+            <div class="sos-modal-btns" style="margin-top:20px;">
+                <button id="sos-reset-cancel-btn"  class="sos-modal-cancel">Keep Contacts</button>
+                <button id="sos-reset-confirm-btn" class="sos-modal-save"
+                    style="background:#e74c3c;">Yes, Reset</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="/static/app.js"></script>
+
+</body>
+</html>

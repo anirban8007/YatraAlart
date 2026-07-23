@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: train-track-detector
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: OLA_MAPS_API_KEY
+        sync: false
