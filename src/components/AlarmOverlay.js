@@ -1,0 +1,111 @@
+import React, { useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Vibration } from 'react-native';
+import * as Speech from 'expo-speech';
+import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import { useApp } from '../context/AppContext';
+import { DEFAULT_RINGTONE } from '../constants/ringtones';
+
+export default function AlarmOverlay({ destName, alarmMinutes, onDismiss }) {
+  const { selectedRingtone, isVoiceEnabled } = useApp();
+  const ringtoneSource =
+    selectedRingtone?.source ||
+    selectedRingtone?.url ||
+    DEFAULT_RINGTONE?.source ||
+    DEFAULT_RINGTONE?.url;
+
+  // Load the user's selected alarm ringtone
+  const player = useAudioPlayer(ringtoneSource);
+
+  useEffect(() => {
+    // 1. Intense Vibration Pattern [wait, vibrate, wait, vibrate...]
+    const VIBRATION_PATTERN = [0, 500, 200, 500]; 
+    Vibration.vibrate(VIBRATION_PATTERN, true); // 'true' means it will loop forever until dismissed
+
+    // 2. Voice Announcement (if enabled)
+    if (isVoiceEnabled !== false) {
+      const destinationText = destName || 'your destination';
+      Speech.speak(`Attention! You are arriving at ${destinationText} in ${alarmMinutes} minutes. Please get ready.`, {
+        rate: 0.9,
+        pitch: 1.1,
+      });
+    }
+
+    // 3. Audio Ringtone Playback
+    async function playLoudAlarm() {
+      try {
+        // Set audio to play through the loud phone speaker, ignoring silent mode
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          staysActiveInBackground: true,
+          interruptionMode: 'duckOthers',
+        });
+
+        if (player) {
+          player.loop = true;
+          player.play();
+        }
+      } catch (error) {
+        console.warn("Could not play alarm sound", error);
+      }
+    }
+
+    playLoudAlarm();
+
+    // 4. Cleanup function: stop everything safely when the user clicks "Dismiss"
+    return () => {
+      try { Vibration.cancel(); } catch (_e) {}
+      try { Speech.stop(); } catch (_e) {}
+      try {
+        if (player) {
+          player.pause();
+        }
+      } catch (_e) {}
+    };
+  }, [player, alarmMinutes, destName, isVoiceEnabled]);
+
+  return (
+    <View style={styles.overlay}>
+      <View style={styles.alarmBox}>
+        <Text style={styles.icon}>🚨</Text>
+        <Text style={styles.title}>ALARM</Text>
+        <Text style={styles.subtitle}>Approaching your destination!</Text>
+        
+        <TouchableOpacity 
+          style={styles.dismissBtn} 
+          onPress={onDismiss}
+        >
+          <Text style={styles.dismissText}>Dismiss</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  overlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(231, 76, 60, 0.95)', // Red transparent background
+    justifyContent: 'center', alignItems: 'center',
+    zIndex: 99999,
+  },
+  alarmBox: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 40,
+    alignItems: 'center',
+    width: '85%',
+    maxWidth: 350,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3, shadowRadius: 12, elevation: 10,
+  },
+  icon: { fontSize: 50, marginBottom: 10 },
+  title: { fontSize: 28, fontWeight: '900', color: '#E74C3C', marginBottom: 10 },
+  subtitle: { fontSize: 16, color: '#666', marginBottom: 30, textAlign: 'center' },
+  dismissBtn: {
+    backgroundColor: '#E74C3C',
+    paddingVertical: 14, paddingHorizontal: 40,
+    borderRadius: 10,
+    width: '100%', alignItems: 'center'
+  },
+  dismissText: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
+});
