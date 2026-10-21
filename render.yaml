@@ -1,7 +1,7 @@
 services:
   - type: web
     name: yatraalert-web
-    env: static
+    runtime: static
     buildCommand: npm install && npm run build:web
     staticPublishPath: ./dist
     routes:
